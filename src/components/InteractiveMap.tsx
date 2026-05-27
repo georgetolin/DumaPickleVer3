@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Court } from '../types';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Minimize2 } from 'lucide-react';
 
 interface InteractiveMapProps {
   courts: Court[];
@@ -13,6 +13,19 @@ export default function InteractiveMap({
   selectedCourtId,
   onSelectCourt
 }: InteractiveMapProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Escape key listener for fullscreen exit
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
   // Bounding box coordinates for Dumaguete region
   const minLat = 9.25;
   const maxLat = 9.38;
@@ -118,38 +131,67 @@ export default function InteractiveMap({
   };
 
   return (
-    <div className="relative w-full h-[380px] md:h-[450px] bg-emerald-50/40 border-2 border-emerald-150 rounded-3xl overflow-hidden shadow-sm group/map select-none">
+    <div className={`transition-all duration-300 ${
+      isFullscreen
+        ? 'fixed inset-0 z-[90] w-screen h-screen bg-slate-900/98 backdrop-blur-sm overflow-hidden select-none'
+        : 'relative w-full h-[380px] md:h-[450px] bg-emerald-50/40 border-2 border-emerald-150 rounded-3xl overflow-hidden shadow-sm group/map select-none'
+    }`}>
       {/* Background Grid Pattern - stationary for elegant parallax grid blueprint look */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#a7f3d0_1px,transparent_1px),linear-gradient(to_bottom,#a7f3d0_1px,transparent_1px)] bg-[size:24px_24px] opacity-25 pointer-events-none" />
+      <div className={`absolute inset-0 bg-[linear-gradient(to_right,#a7f3d0_1px,transparent_1px),linear-gradient(to_bottom,#a7f3d0_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none transition-opacity duration-300 ${
+        isFullscreen ? 'opacity-[0.12] bg-[size:32px_32px]' : 'opacity-25'
+      }`} />
 
       {/* Map Header Overlay */}
-      <div className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-md px-4.5 py-2 rounded-full border-2 border-emerald-100 text-xs text-emerald-900 font-extrabold shadow-md tracking-wide flex items-center gap-2">
+      <div className="absolute top-4 left-4 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4.5 py-2 rounded-full border-2 border-emerald-100 dark:border-slate-800 text-xs text-emerald-900 dark:text-emerald-400 font-extrabold shadow-md tracking-wide flex items-center gap-2">
         <span>📍 Map: Dumaguete & Valencia (6200 Region)</span>
-        <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] text-emerald-700 border border-emerald-200">Drag to Pan</span>
+        <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-slate-800 text-[10px] text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-slate-705">Drag to Pan</span>
+        {isFullscreen && (
+          <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold animate-pulse">
+            Fullscreen Mode (ESC to exit)
+          </span>
+        )}
       </div>
 
+      {/* High Visibility Exit Fullscreen button on top right */}
+      {isFullscreen && (
+        <button
+          onClick={() => setIsFullscreen(false)}
+          className="absolute top-4 right-4 z-50 bg-white/95 dark:bg-slate-900/95 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white transition-all duration-200 backdrop-blur-md p-2.5 rounded-full border-2 border-emerald-100 dark:border-slate-800 text-emerald-900 dark:text-emerald-400 shadow-xl font-extrabold flex items-center justify-center cursor-pointer hover:border-rose-600 dark:hover:border-rose-600"
+          title="Exit Fullscreen View (Esc)"
+        >
+          <Minimize2 className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Zoom and Re-center controls overlay */}
-      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1.5 bg-white/95 border-2 border-emerald-100 rounded-2xl p-1 shadow-lg backdrop-blur-md">
+      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 border-2 border-emerald-100 dark:border-slate-800 rounded-2xl p-1 shadow-lg backdrop-blur-md">
         <button
           onClick={handleZoomIn}
           title="Zoom In"
-          className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-800 transition-colors flex items-center justify-center cursor-pointer font-bold border-b border-slate-100"
+          className="p-1.5 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-lg text-emerald-800 dark:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer font-bold border-b border-slate-100 dark:border-slate-800"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={handleZoomOut}
           title="Zoom Out"
-          className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-800 transition-colors flex items-center justify-center cursor-pointer font-bold border-b border-slate-100"
+          className="p-1.5 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-lg text-emerald-800 dark:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer font-bold border-b border-slate-100 dark:border-slate-800"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleReset}
           title="Recenter Map"
-          className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-800 transition-colors flex items-center justify-center cursor-pointer font-bold"
+          className="p-1.5 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-lg text-emerald-800 dark:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer font-bold border-b border-slate-100 dark:border-slate-800"
         >
           <RotateCcw className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
+          className="p-1.5 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-lg text-emerald-800 dark:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer font-bold"
+        >
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
       </div>
 
@@ -287,8 +329,8 @@ export default function InteractiveMap({
                 <div
                   className={`relative flex items-center justify-center rounded-2xl transition-all duration-300 ${
                     isSelected
-                      ? 'w-11 h-11 bg-emerald-500 text-white border-4 border-white scale-110 shadow-lg shadow-emerald-250'
-                      : 'w-9 h-9 bg-white text-emerald-600 hover:text-white border-2 border-emerald-200 hover:bg-emerald-500 hover:border-emerald-500 hover:scale-105 hover:shadow-md'
+                      ? 'w-11 h-11 bg-emerald-500 text-white border-4 border-white scale-110 shadow-lg shadow-emerald-250 hover:scale-125'
+                      : 'w-9 h-9 bg-white text-emerald-600 hover:text-white border-2 border-emerald-200 hover:bg-emerald-500 hover:border-emerald-500 hover:scale-120 hover:shadow-lg'
                   }`}
                 >
                   {/* Visual Icon */}
@@ -297,7 +339,7 @@ export default function InteractiveMap({
                   </span>
 
                   {/* Popover Card on Hover */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-white border-2 border-emerald-100 rounded-2xl p-3.5 shadow-2xl min-w-[180px] max-w-[220px] z-30 pointer-events-none text-left">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 bg-white border-2 border-emerald-100 rounded-2xl p-3.5 shadow-2xl min-w-[190px] max-w-[230px] z-30 pointer-events-none text-left opacity-0 translate-y-2 scale-95 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-300 ease-out">
                     <div className="font-sans font-black text-slate-900 text-[11px] leading-tight truncate">{court.name}</div>
                     <div className="text-[9px] text-emerald-600 mt-0.5 tracking-wider font-extrabold uppercase">
                       {court.courtCount} {court.courtCount > 1 ? 'COURTS' : 'COURT'} · {court.type}
@@ -306,6 +348,8 @@ export default function InteractiveMap({
                       <span>{court.rentalFee === 0 ? 'Free entry' : `₱${court.rentalFee}/${court.feeUnit}`}</span>
                       {court.lights && <span className="text-emerald-600">● LED Lights</span>}
                     </div>
+                    {/* Tooltip caret arrow pointing down */}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1.5 w-3 h-3 bg-white border-r-2 border-b-2 border-emerald-100 rotate-45" />
                   </div>
                 </div>
               </button>

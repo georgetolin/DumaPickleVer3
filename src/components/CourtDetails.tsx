@@ -11,6 +11,7 @@ interface CourtDetailsProps {
   userDistance?: number | null; // Computed distance from active location in km
   bookings: Booking[];
   onBookSlot: (courtId: string, courtName: string, date: string, timeSlot: string, notes?: string) => void;
+  onOpenDedicatedPage?: (courtId: string) => void;
 }
 
 export default function CourtDetails({
@@ -21,7 +22,8 @@ export default function CourtDetails({
   onSubmitReview,
   userDistance,
   bookings = [],
-  onBookSlot
+  onBookSlot,
+  onOpenDedicatedPage
 }: CourtDetailsProps) {
   // Theme Color Configurations
   const theme = court.themeColor || 'emerald';
@@ -241,6 +243,16 @@ export default function CourtDetails({
             <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{court.location}</span>
           </p>
+
+          {onOpenDedicatedPage && (
+            <button
+              onClick={() => onOpenDedicatedPage(court.id)}
+              className="mt-3.5 inline-flex items-center gap-1.5 px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-sans font-black text-[10px] uppercase tracking-wider rounded-xl cursor-pointer transition select-none shadow-md shadow-indigo-500/15 active:scale-95 border-none"
+              id={`open-dedicated-page-btn-${court.id}`}
+            >
+              <span>🌐 Open Dedicated Court Info & Customizer</span>
+            </button>
+          )}
         </div>
 
         {/* Live Active Board ticker */}

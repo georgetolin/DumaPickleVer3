@@ -15,6 +15,8 @@ import EventsTimeline from './components/EventsTimeline';
 import GuidesAndCoaches from './components/GuidesAndCoaches';
 import CourtOwnerDashboard from './components/CourtOwnerDashboard';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
+import RegulatoryCompliance from './components/RegulatoryCompliance';
+import DedicatedCourtPage from './components/DedicatedCourtPage';
 import { UserRequest, FrontendConfig, ActivityLog, Booking } from './types';
 import {
   Activity,
@@ -197,6 +199,11 @@ export default function App() {
 
   // 2. Active Tab & Viewing selectors
   const [activeTab, setActiveTab] = useState<'courts' | 'games' | 'rankings' | 'events' | 'guides'>('courts');
+  const [activeCourtIdPage, setActiveCourtIdPage] = useState<string | null>(null);
+  const [activeLegalTab, setActiveLegalTab] = useState<'privacy' | 'terms' | null>(null);
+  const [complianceAccepted, setComplianceAccepted] = useState<boolean>(() => {
+    return localStorage.getItem('p6200_compliance_accepted') === 'true';
+  });
   const [selectedCourtId, setSelectedCourtId] = useState<string>('the-ryze');
   const [courtSearchQuery, setCourtSearchQuery] = useState('');
   const [courtTypeFilter, setCourtTypeFilter] = useState('All');
@@ -832,6 +839,28 @@ export default function App() {
     });
   }
 
+  if (activeCourtIdPage) {
+    const activeCourtObj = courts.find(c => c.id === activeCourtIdPage);
+    if (activeCourtObj) {
+      return (
+        <DedicatedCourtPage
+          court={activeCourtObj}
+          appRole={appRole}
+          currentUserProfile={currentUserProfile}
+          onBack={() => setActiveCourtIdPage(null)}
+          onUpdateCourt={(updatedCourt) => {
+            setCourts(prev => prev.map(c => c.id === updatedCourt.id ? updatedCourt : c));
+          }}
+          onToggleCheckIn={handleToggleCheckIn}
+          onCommitReview={handleCommitReview}
+          bookings={bookings}
+          onBookSlot={handleCreateBooking}
+          onAddSysLogOnPage={addSysLog}
+        />
+      );
+    }
+  }
+
   return (
     <div className="bg-emerald-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen font-sans antialiased overflow-x-hidden transition-colors duration-200 pb-20 md:pb-0">
       
@@ -1300,7 +1329,10 @@ export default function App() {
                     return (
                       <button
                         key={court.id}
-                        onClick={() => setSelectedCourtId(court.id)}
+                        onClick={() => {
+                          setSelectedCourtId(court.id);
+                          setActiveCourtIdPage(court.id);
+                        }}
                         className={`w-full text-left p-4.5 rounded-3xl border-2 transition-all duration-300 flex flex-col justify-between space-y-3 outline-none font-sans cursor-pointer group hover:translate-y-[-1px] ${
                           isSelected
                             ? 'bg-emerald-50 border-emerald-400 shadow-md shadow-emerald-100'
@@ -1388,6 +1420,7 @@ export default function App() {
                   onSubmitReview={(rating, comment) => handleCommitReview(selectedCourt.id, rating, comment)}
                   bookings={bookings}
                   onBookSlot={handleCreateBooking}
+                  onOpenDedicatedPage={setActiveCourtIdPage}
                   userDistance={
                     userCoords
                       ? getDistanceInKm(
@@ -1521,11 +1554,21 @@ export default function App() {
               <span className="text-emerald-300/80">· Serving Negros Oriental court-by-court since 2026.</span>
             </div>
             <div className="flex items-center gap-4 text-emerald-300 font-bold">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <button 
+                onClick={() => setActiveLegalTab('privacy')} 
+                className="hover:text-white transition-colors cursor-pointer text-xs font-bold bg-transparent border-0 py-0 px-0"
+              >
+                Privacy Policy
+              </button>
               <span>·</span>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+              <button 
+                onClick={() => setActiveLegalTab('terms')} 
+                className="hover:text-white transition-colors cursor-pointer text-xs font-bold bg-transparent border-0 py-0 px-0"
+              >
+                Terms of Service
+              </button>
               <span>·</span>
-              <span className="text-amber-400 font-black uppercase tracking-widest font-mono text-[9px] bg-emerald-950 border border-emerald-800 px-2.5 py-1 rounded-full leading-none">6200 CORE v2.0</span>
+              <span className="text-amber-400 font-black uppercase tracking-widest font-mono text-[9px] bg-emerald-950 border border-emerald-800 px-2.5 py-1 rounded-full leading-none">6200 CORE v2.4</span>
             </div>
           </div>
 
@@ -1675,6 +1718,55 @@ export default function App() {
           </button>
         )}
       </nav>
+
+      {/* REGULATORY COMPLIANCE LEGAL HUBS & OVERLAYS */}
+      <RegulatoryCompliance 
+        activeDoc={activeLegalTab} 
+        onClose={() => setActiveLegalTab(null)} 
+      />
+
+      {/* REGULATORY COMPLIANCE NOTIFICATION BAR */}
+      {!complianceAccepted && (
+        <div className="fixed bottom-16 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[480px] z-[95] bg-slate-900 border-2 border-emerald-500/30 text-white rounded-3xl p-5 shadow-2xl flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">🛡️</span>
+            <div>
+              <h4 className="font-extrabold text-[11px] uppercase text-emerald-400 tracking-wider">
+                Philippine Data Privacy Act R.A.10173 Consent
+              </h4>
+              <p className="text-[10px] text-slate-300 mt-1 leading-relaxed font-sans">
+                DumaPickle 6200 collects essential performance ELO values and court bookings in Negros Oriental to maintain tournament Integrity. Accessing features implies full agreement with our compliance terms.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/60 pt-3 mt-1.5 text-xs">
+            <div className="flex items-center gap-2.5 text-[10px] text-slate-400 font-bold font-sans">
+              <button 
+                onClick={() => setActiveLegalTab('privacy')} 
+                className="hover:text-emerald-400 underline transition cursor-pointer bg-transparent border-0 py-0 px-0"
+              >
+                Privacy Clauses
+              </button>
+              <span>·</span>
+              <button 
+                onClick={() => setActiveLegalTab('terms')} 
+                className="hover:text-emerald-400 underline transition cursor-pointer bg-transparent border-0 py-0 px-0"
+              >
+                Full Terms
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem('p6200_compliance_accepted', 'true');
+                setComplianceAccepted(true);
+              }}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 transition-all text-slate-950 font-black uppercase text-[9px] tracking-wider rounded-xl cursor-pointer shadow-md shadow-emerald-500/20"
+            >
+              Acknowledge & Sync
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
