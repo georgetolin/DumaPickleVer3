@@ -1,0 +1,6 @@
+{
+  "name": "PickleTown 6200",
+  "description": "Dumaguete's premium pickleball community hub. Find courts, track rankings, schedule matches, and connect with players across Negros Oriental.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
