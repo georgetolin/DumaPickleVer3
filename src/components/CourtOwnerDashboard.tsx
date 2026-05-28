@@ -77,8 +77,18 @@ export default function CourtOwnerDashboard({
   const [courtThemeColor, setCourtThemeColor] = useState<'emerald' | 'amber' | 'indigo' | 'rose' | 'slate' | 'sky' | 'teal' | 'orange'>('emerald');
   const [courtCustomSlots, setCourtCustomSlots] = useState('');
 
-  // Owned listings matching context
-  const myOwnedCourts = courts.filter(c => c.ownerName === ownerName || !c.ownerName || c.ownerName === 'Owner' || c.ownerName === '');
+  // Owned listings matching context - Strictly isolated to guarantee separate accounts cannot access other people's listings
+  const myOwnedCourts = courts.filter(c => {
+    // 1. Direct ownership matching: If court belongs strictly to this logged-in manager
+    if (c.ownerName === ownerName) return true;
+    
+    // 2. Demo fallback sandbox: Only the designated demo managers get access to unassigned/unowned seed courts
+    if (ownerName === 'Demo Facility Manager' || ownerName === 'George T.') {
+      return !c.ownerName || c.ownerName === 'Owner' || c.ownerName === '';
+    }
+    
+    return false;
+  });
   const myOwnedCourtIds = myOwnedCourts.map(c => c.id);
   const myOwnedBookings = bookings.filter(b => myOwnedCourtIds.includes(b.courtId));
 

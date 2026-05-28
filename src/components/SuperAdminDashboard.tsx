@@ -185,7 +185,8 @@ export default function SuperAdminDashboard({
             reviews: [],
             images: details.images || [],
             latitude: Number(details.latitude || 9.3060),
-            longitude: Number(details.longitude || 123.3090)
+            longitude: Number(details.longitude || 123.3090),
+            ownerName: targetReq.submittedBy
           };
 
           setCourts(prev => {

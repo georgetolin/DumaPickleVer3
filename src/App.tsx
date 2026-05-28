@@ -584,6 +584,18 @@ export default function App() {
     localStorage.setItem('p6200_user_is_hidden', profileIsHidden ? 'true' : 'false');
   }, [profileName, profileDupr, profileGender, profileIsHidden]);
 
+  // Enforce zero trust role guard gates to prevent accidental or intentional unauthorized page bypasses.
+  useEffect(() => {
+    if (activeTab === 'owner_portal' && appRole !== 'CourtOwner') {
+      addSysLog(`Access Gate Protection: Blocked attempt to read Facility Owner Panel`, 'Admin', `Current role is "${appRole}". User downgraded and routed back.`);
+      setActiveTab('courts');
+    }
+    if (activeTab === 'admin_portal' && appRole !== 'SuperAdmin') {
+      addSysLog(`Access Gate Protection: Blocked attempt to read Super Admin Panel`, 'Admin', `Current role is "${appRole}". User downgraded and routed back.`);
+      setActiveTab('courts');
+    }
+  }, [activeTab, appRole]);
+
   // Ensure user is registered in the leaderboard players list if needed (deduplicated)
   useEffect(() => {
     setPlayers(prev => {
@@ -1725,7 +1737,7 @@ export default function App() {
         )}
 
         {/* COURT BUSINESS PORTAL TAB */}
-        {activeTab === 'owner_portal' && (
+        {activeTab === 'owner_portal' && appRole === 'CourtOwner' && (
           <CourtOwnerDashboard
             courts={courts}
             ownerName={profileName}
@@ -1759,7 +1771,7 @@ export default function App() {
         )}
 
         {/* SUPERADMIN OPERATOR TAB */}
-        {activeTab === 'admin_portal' && (
+        {activeTab === 'admin_portal' && appRole === 'SuperAdmin' && (
           <SuperAdminDashboard
             courts={courts}
             setCourts={setCourts}
