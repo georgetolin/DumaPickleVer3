@@ -57,6 +57,7 @@ export default function RankingsLeaderboard({
   const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState<string>('All');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Find player trend statistics
   const startRating = duprHistory && duprHistory.length > 0 ? duprHistory[0].rating : 3.50;
@@ -81,16 +82,18 @@ export default function RankingsLeaderboard({
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             (p.hometown && p.hometown.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesGender = genderFilter === 'All' || p.gender === genderFilter;
-      return matchesSearch && matchesGender;
+      const matchesPrivacy = !p.isHidden || p.name === currentProfileName;
+      return matchesSearch && matchesGender && matchesPrivacy;
     });
 
   const handleSubmitResult = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (winner1Id === loser1Id || (winner2Id && winner2Id === loser2Id) || winner1Id === loser2Id) {
-      alert('Players cannot play against themselves! Please select unique players.');
+      setFormError('Competition Overlap: Players cannot play against themselves. Please select unique, discrete athletes for both teams.');
       return;
     }
+    setFormError(null);
 
     const selectedCourt = courts.find(c => c.id === formCourtId);
     if (!selectedCourt) return;
@@ -403,7 +406,10 @@ export default function RankingsLeaderboard({
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">Log match scores to dynamically adjust DUPR values</p>
               </div>
               <button
-                onClick={() => setIsSubmitModalOpen(false)}
+                onClick={() => {
+                  setIsSubmitModalOpen(false);
+                  setFormError(null);
+                }}
                 className="text-slate-400 hover:text-slate-600 text-sm font-bold font-mono p-1 border border-transparent hover:border-slate-200 rounded cursor-pointer"
               >
                 ✖
@@ -411,6 +417,12 @@ export default function RankingsLeaderboard({
             </div>
 
             <form onSubmit={handleSubmitResult} className="p-6 space-y-4">
+              {formError && (
+                <div id="leaderboard-match-error-banner" className="p-3.5 bg-rose-50 border-2 border-rose-150 text-rose-800 text-[11px] rounded-2xl flex items-start gap-2 animate-bounce font-sans font-black">
+                  <span className="shrink-0 text-xs">⚠️</span>
+                  <span className="leading-tight">{formError}</span>
+                </div>
+              )}
               {/* Select Court */}
               <div>
                 <label className="block text-[10px] font-black text-slate-450 uppercase tracking-widest mb-1.5">Select Arena</label>
@@ -541,7 +553,10 @@ export default function RankingsLeaderboard({
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsSubmitModalOpen(false)}
+                  onClick={() => {
+                    setIsSubmitModalOpen(false);
+                    setFormError(null);
+                  }}
                   className="px-5 py-2.5 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-500 font-bold text-xs rounded-full transition cursor-pointer"
                 >
                   Cancel

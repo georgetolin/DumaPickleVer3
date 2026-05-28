@@ -302,7 +302,8 @@ export default function SuperAdminDashboard({
           setAuditMessage(`Approved Community Event "${details.title}" is now published to the timeline!`);
         }
       } catch (err: any) {
-        alert(`Approval error: ${err.message}`);
+        onAddSysLog(`Permit Approval Interruption: ${err.message}`, 'Admin', 'Critical payload mapping issue');
+        setAuditMessage(`Approval Error: Failed to process selection permit. Details: ${err.message}`);
       }
     } else {
       onAddSysLog(`Rejected proposal request item: ID ${requestId}`, 'Admin', `Target type: ${targetReq.type}`);

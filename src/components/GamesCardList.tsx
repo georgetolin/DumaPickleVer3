@@ -22,6 +22,7 @@ export default function GamesCardList({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>('All');
   const [filterLevel, setFilterLevel] = useState<string>('All');
+  const [formError, setFormError] = useState<string | null>(null);
 
   // New Game Form state
   const [formTitle, setFormTitle] = useState('');
@@ -41,9 +42,10 @@ export default function GamesCardList({
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
-      alert('Please fill out a descriptive game title.');
+      setFormError('Validation Deficit: Please fill out a descriptive game title.');
       return;
     }
+    setFormError(null);
     const selectedCourt = courts.find(c => c.id === formCourtId);
     if (!selectedCourt) return;
 
@@ -234,7 +236,10 @@ export default function GamesCardList({
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">Let players near Dumaguete join your scheduled game slot</p>
               </div>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setFormError(null);
+                }}
                 className="text-slate-400 hover:text-slate-600 text-sm font-bold font-mono p-1 border border-transparent hover:border-slate-200 rounded cursor-pointer"
               >
                 ✖
@@ -242,6 +247,12 @@ export default function GamesCardList({
             </div>
 
             <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+              {formError && (
+                <div id="games-submission-error-banner" className="p-3.5 bg-rose-50 border-2 border-rose-150 text-rose-800 text-[11px] rounded-2xl flex items-start gap-2 animate-bounce font-sans font-black">
+                  <span className="shrink-0 text-xs">⚠️</span>
+                  <span className="leading-tight">{formError}</span>
+                </div>
+              )}
               {/* Form Title */}
               <div>
                 <label className="block text-[10px] font-black text-slate-450 uppercase tracking-widest mb-1.5">Game Description Label</label>
@@ -346,7 +357,10 @@ export default function GamesCardList({
               <div className="flex items-center justify-end gap-3 pt-5 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setFormError(null);
+                  }}
                   className="px-5 py-2.5 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-600 text-xs font-black rounded-full transition cursor-pointer"
                 >
                   Cancel

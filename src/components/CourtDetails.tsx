@@ -118,6 +118,17 @@ export default function CourtDetails({
   });
   const [bookingNotes, setBookingNotes] = useState<string>('');
   const [bookingSlotSuccess, setBookingSlotSuccess] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
+
+  const handleCopyCoords = () => {
+    try {
+      navigator.clipboard.writeText(`${court.latitude}, ${court.longitude}`);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2500);
+    } catch (e) {
+      console.error("Clipboard copy failed: ", e);
+    }
+  };
 
   const getNext5Days = () => {
     const list = [];
@@ -648,11 +659,11 @@ export default function CourtDetails({
           <span>Contact Operator ({court.contact})</span>
         </a>
         <button
-          onClick={() => alert(`Directions coordinates: ${court.latitude}, ${court.longitude}. Double tap to check coordinates!`)}
+          onClick={handleCopyCoords}
           className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-600 text-xs font-black rounded-2xl transition-all cursor-pointer"
         >
           <Info className="w-4 h-4 text-slate-400" />
-          <span>Copy Coords</span>
+          <span>{copyFeedback ? '✓ Copied!' : 'Copy Coords'}</span>
         </button>
       </div>
     </div>

@@ -71,6 +71,7 @@ export default function CourtOwnerDashboard({
   const [imagesList, setImagesList] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [successBanner, setSuccessBanner] = useState('');
+  const [errorBanner, setErrorBanner] = useState('');
 
   // Customizable Page Themes & Timeslot state
   const [courtThemeColor, setCourtThemeColor] = useState<'emerald' | 'amber' | 'indigo' | 'rose' | 'slate' | 'sky' | 'teal' | 'orange'>('emerald');
@@ -139,9 +140,12 @@ export default function CourtOwnerDashboard({
   const handleCreateNewCourtApplication = (e: React.FormEvent) => {
     e.preventDefault();
     if (!courtName || !courtLocation) {
-      alert('Please provide a Court Name and physical street Location');
+      setErrorBanner('Please provide a Court Name and physical street Location');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => setErrorBanner(''), 4500);
       return;
     }
+    setErrorBanner('');
 
     onAddCourtRequest({
       type: 'NewCourtSuggestion',
@@ -257,6 +261,16 @@ export default function CourtOwnerDashboard({
           <div className="space-y-0.5">
             <span className="text-[10px] uppercase font-black tracking-widest text-emerald-800 dark:text-emerald-400">DATABASE UPDATE COMPLETED</span>
             <p className="text-xs text-slate-750 dark:text-slate-350 leading-relaxed font-bold">{successBanner}</p>
+          </div>
+        </div>
+      )}
+
+      {errorBanner && (
+        <div className="bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-100 dark:border-rose-900/40 p-4 rounded-2xl text-left flex items-start gap-3 animate-in fade-in duration-300">
+          <span className="text-xs text-rose-500 mt-1">⚠️</span>
+          <div className="space-y-0.5">
+            <span className="text-[10px] uppercase font-black tracking-widest text-rose-800 dark:text-rose-450">VALIDATION DISCREPANCY</span>
+            <p className="text-xs text-rose-950 dark:text-rose-200 leading-relaxed font-bold">{errorBanner}</p>
           </div>
         </div>
       )}

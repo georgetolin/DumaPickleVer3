@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Court, Game, Player, MatchResult, TournamentEvent, Coach } from './types';
+import { auth, db } from './lib/firebase';
+import AuthOverlay from './components/AuthOverlay';
 import {
   initialCourts,
   initialPlayers,
@@ -39,6 +41,9 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   // 1. Initial State Managers (Hydrating from LocalStorage if existing)
   const [courts, setCourts] = useState<Court[]>(() => {
     const saved = localStorage.getItem('p6200_courts');
@@ -49,6 +54,7 @@ export default function App() {
   const [appRole, setAppRole] = useState<'Player' | 'CourtOwner' | 'SuperAdmin'>(() => {
     return (localStorage.getItem('p6200_app_role') as any) || 'Player';
   });
+  const [lastProfileSaveTime, setLastProfileSaveTime] = useState<number>(0);
 
   const [frontendConfig, setFrontendConfig] = useState<FrontendConfig>(() => {
     const saved = localStorage.getItem('p6200_frontend_config');
@@ -384,6 +390,9 @@ export default function App() {
   const [profileGender, setProfileGender] = useState<'Male' | 'Female' | 'Other'>(() => {
     return (localStorage.getItem('p6200_user_gender') as any) || 'Male';
   });
+  const [profileIsHidden, setProfileIsHidden] = useState<boolean>(() => {
+    return localStorage.getItem('p6200_user_is_hidden') === 'true';
+  });
   const [showProfileConfig, setShowProfileConfig] = useState(false);
 
   // 3b. Dark Mode & DUPR History states
@@ -454,6 +463,83 @@ export default function App() {
     gender: profileGender
   };
 
+  // Firebase Auth & Live Profile Synchronization
+  useEffect(() => {
+    let activeUserRef: any = null;
+    let activeUserHandler: any = null;
+
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      // Clean up previous user listener if any
+      if (activeUserRef && activeUserHandler) {
+        try {
+          activeUserRef.off('value', activeUserHandler);
+        } catch (e) {
+          console.error("Error clearing Firebase DB listener: ", e);
+        }
+        activeUserRef = null;
+        activeUserHandler = null;
+      }
+
+      if (user) {
+        setCurrentUser(user);
+        
+        // Setup a real-time sync with user's db path
+        const userRef = db.ref(`users/${user.uid}`);
+        const handleValue = (snapshot: any) => {
+          const profile = snapshot.val();
+          if (profile) {
+            if (profile.name) setProfileName(profile.name);
+            if (profile.duprRating) setProfileDupr(Number(profile.duprRating));
+            if (profile.gender) setProfileGender(profile.gender as any);
+            if (profile.role) setAppRole(profile.role as any);
+            if (profile.isHidden !== undefined) setProfileIsHidden(!!profile.isHidden);
+          }
+        };
+        userRef.on('value', handleValue);
+
+        activeUserRef = userRef;
+        activeUserHandler = handleValue;
+
+        // Seed or update the registered players list
+        setPlayers(prev => {
+          const hasUser = prev.some(p => p.id === user.uid);
+          if (!hasUser) {
+            return [
+              ...prev,
+              {
+                id: user.uid,
+                name: user.displayName || 'Athlete',
+                duprRating: 3.50,
+                wins: 0,
+                losses: 0,
+                avatarColor: 'bg-lime-400',
+                hometown: 'Dumaguete City',
+                gender: 'Male',
+                role: 'Player',
+                isHidden: false
+              }
+            ];
+          }
+          return prev;
+        });
+      } else {
+        setCurrentUser(null);
+      }
+      setAuthLoading(false);
+    });
+
+    return () => {
+      unsubscribe();
+      if (activeUserRef && activeUserHandler) {
+        try {
+          activeUserRef.off('value', activeUserHandler);
+        } catch (e) {
+          console.error("Error clearing Firebase DB listener in unmount cleanup: ", e);
+        }
+      }
+    };
+  }, []);
+
   // 4. Persistence Effect watchers
   useEffect(() => {
     localStorage.setItem('p6200_courts', JSON.stringify(courts));
@@ -495,7 +581,8 @@ export default function App() {
     localStorage.setItem('p6200_user_name', profileName);
     localStorage.setItem('p6200_user_dupr', profileDupr.toString());
     localStorage.setItem('p6200_user_gender', profileGender);
-  }, [profileName, profileDupr, profileGender]);
+    localStorage.setItem('p6200_user_is_hidden', profileIsHidden ? 'true' : 'false');
+  }, [profileName, profileDupr, profileGender, profileIsHidden]);
 
   // Ensure user is registered in the leaderboard players list if needed (deduplicated)
   useEffect(() => {
@@ -514,13 +601,28 @@ export default function App() {
             avatarColor: 'bg-lime-400',
             contact: '09171112222',
             hometown: 'Dumaguete City',
-            gender: profileGender
+            gender: profileGender,
+            isHidden: profileIsHidden
           }
         ];
       }
+      
+      const mapped = baseList.map(p => {
+        if (p.id === 'p-user' || (auth.currentUser && p.id === auth.currentUser.uid)) {
+          return {
+            ...p,
+            name: profileName,
+            duprRating: profileDupr,
+            gender: profileGender,
+            isHidden: profileIsHidden
+          };
+        }
+        return p;
+      });
+
       const unique: Player[] = [];
       const seen = new Set<string>();
-      for (const player of baseList) {
+      for (const player of mapped) {
         if (!seen.has(player.id)) {
           seen.add(player.id);
           unique.push(player);
@@ -528,21 +630,42 @@ export default function App() {
       }
       return unique;
     });
-  }, [profileName, profileDupr, profileGender]);
+  }, [profileName, profileDupr, profileGender, profileIsHidden]);
 
   // Sync profile edits with global player list representation
-  const handleUpdateProfile = (name: string, rating: number, gender: 'Male' | 'Female' | 'Other') => {
-    addSysLog(`Updated athlete profile details`, 'Account', `Name: ${name}, DUPR Rating: ${rating}, Gender: ${gender}`);
+  const handleUpdateProfile = (name: string, rating: number, gender: 'Male' | 'Female' | 'Other', isHidden?: boolean) => {
+    addSysLog(`Updated athlete profile details`, 'Account', `Name: ${name}, DUPR Rating: ${rating}, Gender: ${gender}, Private: ${!!isHidden}`);
     setProfileName(name);
     setProfileDupr(rating);
     setProfileGender(gender);
+    setProfileIsHidden(!!isHidden);
+
+    const now = Date.now();
+    const isThrottled = now - lastProfileSaveTime < 5000;
+
+    if (auth.currentUser) {
+      if (isThrottled) {
+        addSysLog(`Profile database sync throttled to prevent redundant writes`, 'Account', `Next live update allowed in 5s`);
+      } else {
+        setLastProfileSaveTime(now);
+        db.ref(`users/${auth.currentUser.uid}`).update({
+          name,
+          duprRating: rating,
+          gender,
+          role: appRole,
+          isHidden: !!isHidden
+        }).catch((e) => console.error("Database sync error for updated profile: ", e));
+      }
+    }
+
     setPlayers(prev => prev.map(p => {
-      if (p.id === 'p-user') {
+      if (p.id === 'p-user' || (auth.currentUser && p.id === auth.currentUser.uid)) {
         return {
           ...p,
           name,
           duprRating: rating,
-          gender
+          gender,
+          isHidden: !!isHidden
         };
       }
       return p;
@@ -565,6 +688,52 @@ export default function App() {
     }
 
     setShowProfileConfig(false);
+  };
+
+  const handleRequestDataErasure = async () => {
+    if (!auth.currentUser) {
+      addSysLog(`Attempted data erasure but no active session was authenticated`, 'Account', `Rejected`);
+      return;
+    }
+    
+    const targetUid = auth.currentUser.uid;
+    const targetName = profileName;
+
+    try {
+      // 1. Remove profile from Realtime Database
+      await db.ref(`users/${targetUid}`).remove();
+      
+      // 2. Add System Log inside local log engine for compliance trail
+      addSysLog(`Permanent erasure request compiled successfully for athlete "${targetName}"`, 'Account', `UID: ${targetUid} has been purged. compliance R.A. 10173`);
+      
+      // 3. Clear local states
+      setProfileName('George T.');
+      setProfileDupr(3.50);
+      setProfileGender('Male');
+      setProfileIsHidden(false);
+      setAppRole('Player');
+
+      localStorage.removeItem('p6200_user_name');
+      localStorage.removeItem('p6200_user_dupr');
+      localStorage.removeItem('p6200_user_gender');
+      localStorage.removeItem('p6200_user_is_hidden');
+      localStorage.removeItem('p6200_app_role');
+
+      // 4. Remove player from dynamic players array
+      setPlayers(prev => prev.filter(p => p.id !== targetUid));
+
+      // 5. Sign out from Firebase Auth
+      await auth.signOut();
+
+      setShowProfileConfig(false);
+      
+      // 6. Raise non-blocking compliance alert flag
+      addSysLog(`Compliance purge completed for athlete: Session terminated`, 'Account', `Data cleared successfully.`);
+      
+    } catch (e: any) {
+      console.error("Data erasure error: ", e);
+      addSysLog(`Data erasure protocol execution error: ${e.message}`, 'Account', 'Failed purge run');
+    }
   };
 
   // 5. Interactive Operations triggers
@@ -839,6 +1008,37 @@ export default function App() {
     });
   }
 
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 z-50 text-white select-none">
+        <div className="w-16 h-16 rounded-3xl bg-emerald-500 flex items-center justify-center text-4xl shadow-xl shadow-emerald-500/25 animate-spin-slow mb-6">
+          🏓
+        </div>
+        <h3 className="font-sans font-black text-xl tracking-wider uppercase mb-2 animate-pulse">Syncing Athlete Session</h3>
+        <p className="font-sans text-xs text-slate-400">Verifying secure credentials with Dumaguete community hub...</p>
+        <div className="w-48 h-1 bg-slate-900 rounded-full overflow-hidden mt-6 relative border border-slate-800">
+          <div className="absolute top-0 bottom-0 bg-emerald-500 w-1/2 rounded-full animate-ping"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <AuthOverlay
+        onAuthSuccess={(user, profileData) => {
+          setCurrentUser(user);
+          if (profileData) {
+            setProfileName(profileData.name || '');
+            setProfileDupr(Number(profileData.duprRating) || 3.50);
+            setProfileGender(profileData.gender || 'Male');
+            setAppRole(profileData.role || 'Player');
+          }
+        }}
+      />
+    );
+  }
+
   if (activeCourtIdPage) {
     const activeCourtObj = courts.find(c => c.id === activeCourtIdPage);
     if (activeCourtObj) {
@@ -992,12 +1192,56 @@ export default function App() {
                       </div>
                     </div>
 
+                    <div className="flex items-center gap-2.5 mt-2 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <input
+                        type="checkbox"
+                        id="profile-is-hidden-checkbox"
+                        checked={profileIsHidden}
+                        onChange={(e) => setProfileIsHidden(e.target.checked)}
+                        className="w-4 h-4 rounded border-2 border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+                      />
+                      <label htmlFor="profile-is-hidden-checkbox" className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-normal cursor-pointer select-none">
+                        🔒 Mask Profile from public rankings list (DPA Privacy Protection)
+                      </label>
+                    </div>
+
                     <button
-                      onClick={() => handleUpdateProfile(profileName, profileDupr, profileGender)}
-                      className="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-amber-955 font-sans font-black text-xs rounded-full shadow-[0_4px_0_0_#d97706] active:translate-y-1 active:shadow-none transition-all shrink-0 mt-2 cursor-pointer"
+                      onClick={() => handleUpdateProfile(profileName, profileDupr, profileGender, profileIsHidden)}
+                      className="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-amber-955 font-sans font-black text-xs rounded-full shadow-[0_4px_0_0_#d97706] active:translate-y-1 active:shadow-none transition-all shrink-0 mt-3.5 cursor-pointer text-center"
                     >
                       Save Changes & Sync Profile
                     </button>
+
+                    <button
+                      onClick={() => {
+                        auth.signOut();
+                        setShowProfileConfig(false);
+                      }}
+                      className="w-full py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-sans font-bold text-xs rounded-full border border-rose-200 dark:border-rose-900/50 transition-all cursor-pointer mt-3 text-center"
+                      id="header-signout-btn"
+                    >
+                      🚪 Log Out of Athlete Account
+                    </button>
+
+                    {auth.currentUser && (
+                      <div className="border-t border-dashed border-rose-200 dark:border-rose-900/50 pt-3.5 mt-3.5 space-y-2">
+                        <span className="block text-[9px] font-black text-rose-500 uppercase tracking-widest leading-none">Athlete Privacy Safeguard</span>
+                        <p className="text-[9.5px] leading-normal text-slate-400 dark:text-slate-500 font-bold">
+                          Under Philippines R.A. 10173 (DPA) and GDPR regulations, you have the absolute <strong>Right to Erasure (To Be Forgotten)</strong> to purge core records forever.
+                        </p>
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Permanently erase and delete your entire player record, rating histories, and check-in logs from Dumapickle 6200 forever? This action is absolutely irreversible.")) {
+                              handleRequestDataErasure();
+                            }
+                          }}
+                          className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-sans font-black text-[10px] rounded-full uppercase tracking-wider transition-all cursor-pointer shadow-[0_3px_0_0_#be123c] active:translate-y-0.5 active:shadow-none inline-block text-center"
+                          id="purge-account-btn"
+                        >
+                          ⚠️ Purge My Personal Data
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
