@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Definitions for Gradients -->
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#022c22" /> <!-- Deep Slate Emerald -->
+      <stop offset="100%" stop-color="#0f172a" /> <!-- Deep Navy/Slate -->
+    </linearGradient>
+    
+    <!-- Paddle Gradient -->
+    <linearGradient id="paddleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" /> <!-- Emerald 500 -->
+      <stop offset="100%" stop-color="#047857" /> <!-- Emerald 700 -->
+    </linearGradient>
+
+    <!-- Ball Gradient -->
+    <linearGradient id="ballGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" /> <!-- Amber 400 -->
+      <stop offset="100%" stop-color="#d97706" /> <!-- Amber 600 -->
+    </linearGradient>
+
+    <!-- Highlight/Gloss effect -->
+    <linearGradient id="glossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Icon Frame with Smooth Rounded Corners -->
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bgGrad)" stroke="#10b981" stroke-width="8" stroke-opacity="0.3" />
+
+  <!-- Shadow Group for depth -->
+  <g filter="drop-shadow(0px 12px 20px rgba(0, 0, 0, 0.4))">
+    <!-- 1. The Pickleball Paddle -->
+    <!-- Handle Grip -->
+    <rect x="236" y="290" width="40" height="130" rx="12" fill="#e2e8f0" />
+    <!-- Handle Grip Wrap Lines (elegant style) -->
+    <path d="M 236 320 L 276 330 M 236 350 L 276 360 M 236 380 L 276 390 M 236 410 L 276 420" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+    <!-- Handle Bottom Cap -->
+    <rect x="230" y="410" width="52" height="16" rx="6" fill="#64748b" />
+    
+    <!-- Paddle Face -->
+    <path d="M 256 120 C 170 120, 160 170, 160 250 C 160 300, 190 320, 256 320 C 322 320, 352 300, 352 250 C 352 170, 342 120, 256 120 Z" fill="url(#paddleGrad)" stroke="#34d399" stroke-width="6" />
+    
+    <!-- Paddle Inner Deco Trim -->
+    <path d="M 256 140 C 190 140, 182 180, 182 245 C 182 285, 205 302, 256 302 C 307 302, 330 285, 330 245 C 330 180, 322 140,  256 140 Z" fill="none" stroke="#a7f3d0" stroke-width="3" stroke-dasharray="10, 6" stroke-opacity="0.4" />
+  </g>
+
+  <!-- 2. The Pickleball (Vibrant Yellow-Amber Overlap) -->
+  <g filter="drop-shadow(0px 8px 16px rgba(0, 0, 0, 0.5))">
+    <circle cx="310" cy="280" r="85" fill="url(#ballGrad)" stroke="#fbbf24" stroke-width="5" />
+    
+    <!-- Signature Pickleball Holes representing 26-hole layout cleanly -->
+    <!-- Center Hole -->
+    <circle cx="310" cy="280" r="11" fill="#0f172a" opacity="0.85" />
+    
+    <!-- Inner Ring of Holes -->
+    <circle cx="310" cy="235" r="9" fill="#0f172a" opacity="0.85" />
+    <circle cx="310" cy="325" r="9" fill="#0f172a" opacity="0.85" />
+    <circle cx="265" cy="280" r="9" fill="#0f172a" opacity="0.85" />
+    <circle cx="355" cy="280" r="9" fill="#0f172a" opacity="0.85" />
+    
+    <!-- Outer Ring/Diag Holes -->
+    <circle cx="278" cy="248" r="8" fill="#0f172a" opacity="0.85" />
+    <circle cx="342" cy="248" r="8" fill="#0f172a" opacity="0.85" />
+    <circle cx="278" cy="312" r="8" fill="#0f172a" opacity="0.85" />
+    <circle cx="342" cy="312" r="8" fill="#0f172a" opacity="0.85" />
+  </g>
+
+  <!-- Dynamic Star/Glance accent for premium community feel -->
+  <path d="M 125 150 L 130 135 L 145 130 L 130 125 L 125 110 L 120 125 L 105 130 L 120 135 Z" fill="#fbbf24" opacity="0.8" />
+  <path d="M 395 105 L 398 95 L 408 92 L 398 89 L 395 79 L 392 89 L 382 92 L 392 95 Z" fill="#34d399" opacity="0.9" />
+
+  <!-- Smooth overlay shine/gloss for luxury touch -->
+  <rect x="24" y="24" width="464" height="232" rx="108" fill="url(#glossGrad)" clip-path="inset(0 0 50% 0)" />
+</svg>
